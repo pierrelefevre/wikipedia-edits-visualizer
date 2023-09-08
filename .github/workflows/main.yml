@@ -15,6 +15,11 @@ jobs:
       with:
         ref: main
 
+    - name: Set up Git
+      run: |
+        git config --global user.email "test@test.com"
+        git config --global user.name "actions runner"
+
     - name: Create github-pages branch
       run: git checkout -B github-pages
 
