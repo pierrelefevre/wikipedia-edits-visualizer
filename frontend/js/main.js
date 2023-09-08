@@ -3,6 +3,15 @@ import * as THREE from "./three.js";
 import Stats from "./stats.js";
 import { PointerLockControlsCannon } from "./PointerLockControlsCannon.js";
 
+const url = "https://stream.wikimedia.org/v2/stream/recentchange";
+const eventSource = new EventSource(url);
+
+eventSource.onopen = () => {
+  console.info("Opened connection.");
+};
+eventSource.onerror = (event) => {
+  console.error("Encountered error", event);
+};
 /**
  * Example of a really barebones version of a fps game.
  */
@@ -23,6 +32,10 @@ const balls = [];
 const ballMeshes = [];
 const boxes = [];
 const boxMeshes = [];
+
+// simulation variables
+let maxSize = 4000;
+let simulationStarted = false;
 
 const instructions = document.getElementById("instructions");
 
@@ -135,7 +148,7 @@ function initCannon() {
   sphereShape = new CANNON.Sphere(radius);
   sphereBody = new CANNON.Body({ mass: 5, material: physicsMaterial });
   sphereBody.addShape(sphereShape);
-  sphereBody.position.set(0, 1.3, 20);
+  sphereBody.position.set(0, 1.3, 35);
   sphereBody.linearDamping = 0.9;
   world.addBody(sphereBody);
 
@@ -149,7 +162,7 @@ function initCannon() {
   // Add perimeter box
   let wallHeight = 200;
   let wallThickness = 0.1;
-  let innerSize = 10;
+  let innerSize = 20;
   const boxSizes = [
     [innerSize, wallThickness],
     [wallThickness, innerSize],
@@ -193,19 +206,65 @@ function initCannon() {
     boxMeshes.push(boxMesh);
   }
 
-  function shoot() {
-    // The shooting balls
-    let radius = 2 + Math.random();
+  function shoot(event) {
+    //   {
+    //     "$schema": "/mediawiki/recentchange/1.0.0",
+    //     "meta": {
+    //         "uri": "https://en.wikipedia.org/wiki/Category:Category-Class_politics_articles",
+    //         "request_id": "be43873f-8ef3-4f36-ba88-22fb27fd7793",
+    //         "id": "814177ae-4cf6-4f22-91f3-cf2dfc0e6622",
+    //         "dt": "2023-09-08T18:34:43Z",
+    //         "domain": "en.wikipedia.org",
+    //         "stream": "mediawiki.recentchange",
+    //         "topic": "eqiad.mediawiki.recentchange",
+    //         "partition": 0,
+    //         "offset": 4928880314
+    //     },
+    //     "id": 1673247079,
+    //     "type": "categorize",
+    //     "namespace": 14,
+    //     "title": "Category:Category-Class politics articles",
+    //     "title_url": "https://en.wikipedia.org/wiki/Category:Category-Class_politics_articles",
+    //     "comment": "[[:Category talk:Left-wing politicians in France]] added to category, [[Special:WhatLinksHere/Category talk:Left-wing politicians in France|this page is included within other pages]]",
+    //     "timestamp": 1694198083,
+    //     "user": "Simeon",
+    //     "bot": false,
+    //     "notify_url": "https://en.wikipedia.org/w/index.php?diff=1174483612&oldid=404589625",
+    //     "server_url": "https://en.wikipedia.org",
+    //     "server_name": "en.wikipedia.org",
+    //     "server_script_path": "/w",
+    //     "wiki": "enwiki",
+    //     "parsedcomment": "<a href=\"/wiki/Category_talk:Left-wing_politicians_in_France\" title=\"Category talk:Left-wing politicians in France\">Category talk:Left-wing politicians in France</a> added to category, <a href=\"/wiki/Special:WhatLinksHere/Category_talk:Left-wing_politicians_in_France\" title=\"Special:WhatLinksHere/Category talk:Left-wing politicians in France\">this page is included within other pages</a>"
+    // }
+    // Validate event
+    if (!(event.length && event.length.old && event.length.new)) return;
+
+    let diff = event.length.new - event.length.old;
+    const maxRadius = 1000;
+    maxSize = Math.max(maxSize, Math.abs(diff));
+
+    // Radius should be proportional to the length of the edit compared to maxSize, capped at 5
+    let radius = Math.min(maxRadius, Math.abs(diff)) / 100;
+
+    console.log(radius, maxSize, diff);
+    
     const ballShape = new CANNON.Sphere(radius);
     const ballGeometry = new THREE.SphereBufferGeometry(radius, 32, 32);
 
-    const ballBody = new CANNON.Body({ mass: 10 });
+    const ballBody = new CANNON.Body({ mass: 1 });
     ballBody.addShape(ballShape);
 
     // Generate random hex color
-    let color = Math.floor(Math.random() * 16777215).toString(16);
-    while (color.length < 6) {
-      color = "0" + color;
+    let color = "ffffff";
+    // let color = Math.floor(Math.random() * 16777215).toString(16);
+    // while (color.length < 6) {
+    //   color = "0" + color;
+    // }
+
+    if (diff < 0) {
+      color = "00ff00";
+    } else {
+      color = "ff0000";
     }
 
     const ballMesh = new THREE.Mesh(
@@ -235,13 +294,19 @@ function initCannon() {
     ballMesh.position.copy(ballBody.position);
   }
 
-  window.addEventListener("click", () => {
-    shoot();
-  });
+  eventSource.onmessage = (event) => {
+    if (!simulationStarted) return;
 
-  setInterval(() => {
-    shoot();
-  }, 300);
+    // event.data will be a JSON message
+    const data = JSON.parse(event.data);
+    // Edits from English Wikipedia
+    if (data.server_name === "en.wikipedia.org") {
+      // Output the title of the edited page
+      shoot(data);
+    }
+  };
+
+  window.addEventListener("click", () => {});
 }
 
 function initPointerLock() {
@@ -250,6 +315,7 @@ function initPointerLock() {
 
   instructions.addEventListener("click", () => {
     controls.lock();
+    simulationStarted = true;
   });
 
   controls.addEventListener("lock", () => {
@@ -285,23 +351,22 @@ function animate() {
       continue;
     }
 
-    let factor = 0.002;
-    if (balls[i].shapes[0].radius < 1) {
-      factor = 0.05;
-      balls[i].mass = 100;
+    let factor = 0.001;
+    if (balls[i].shapes[0].radius < 0.5) {
+      factor = 0.01;
     }
 
     // Adjust physics radius
     balls[i].shapes[0].radius = balls[i].shapes[0].radius * (1 - factor);
 
     // Adjust three.js radius
-    let currentScale = ballMeshes[i].getWorldScale();
+    let currentScale = new THREE.Vector3();
+    ballMeshes[i].getWorldScale(currentScale);
     ballMeshes[i].scale.set(
       currentScale.x * (1 - factor),
       currentScale.y * (1 - factor),
       currentScale.z * (1 - factor)
     );
-
   }
 
   // Update ball positions
