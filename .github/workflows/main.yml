@@ -1,4 +1,4 @@
-name: Deploy frontend to github-pages
+name: Deploy Frontend to github-pages
 
 on:
   push:
@@ -15,11 +15,16 @@ jobs:
       with:
         ref: main
 
+    - name: Create github-pages branch
+      run: git checkout -B github-pages
+
     - name: Copy frontend to github-pages branch
       run: |
-        git checkout -b github-pages
-        git rm -rf .
-        cp -r frontend/* .
+        mkdir -p frontend  # Create the directory if it doesn't exist
+        cp -r ./frontend/* ./  # Copy the contents of /frontend to the root
+
+    - name: Commit and push to github-pages
+      run: |
         git add .
         git commit -m "Update github-pages with latest frontend"
         git push origin github-pages
@@ -28,4 +33,3 @@ jobs:
       run: |
         git checkout main
         git branch -D github-pages
-
