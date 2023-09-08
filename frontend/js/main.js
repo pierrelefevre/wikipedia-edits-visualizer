@@ -262,9 +262,9 @@ function initCannon() {
     // }
 
     if (diff < 0) {
-      color = "00ff00";
-    } else {
       color = "ff0000";
+    } else {
+      color = "00ff00";
     }
 
     const ballMesh = new THREE.Mesh(
