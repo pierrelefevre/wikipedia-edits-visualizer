@@ -1,0 +1,31 @@
+name: Deploy frontend to github-pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout main branch
+      uses: actions/checkout@v2
+      with:
+        ref: main
+
+    - name: Copy frontend to github-pages branch
+      run: |
+        git checkout -b github-pages
+        git rm -rf .
+        cp -r frontend/* .
+        git add .
+        git commit -m "Update github-pages with latest frontend"
+        git push origin github-pages
+
+    - name: Cleanup
+      run: |
+        git checkout main
+        git branch -D github-pages
+
