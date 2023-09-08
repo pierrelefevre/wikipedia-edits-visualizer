@@ -199,7 +199,7 @@ function initCannon() {
     const ballShape = new CANNON.Sphere(radius);
     const ballGeometry = new THREE.SphereBufferGeometry(radius, 32, 32);
 
-    const ballBody = new CANNON.Body({ mass: radius });
+    const ballBody = new CANNON.Body({ mass: 10 });
     ballBody.addShape(ballShape);
 
     // Generate random hex color
@@ -288,6 +288,7 @@ function animate() {
     let factor = 0.002;
     if (balls[i].shapes[0].radius < 1) {
       factor = 0.05;
+      balls[i].mass = 100;
     }
 
     // Adjust physics radius
@@ -301,7 +302,6 @@ function animate() {
       currentScale.z * (1 - factor)
     );
 
-    // balls[i].mass = balls[i].mass * 1 - factor;
   }
 
   // Update ball positions
