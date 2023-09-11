@@ -1,0 +1,12 @@
+[Unit]
+Description=Producer Script Service
+After=kafka.service
+Requires=kafka.service
+
+[Service]
+ExecStart=/usr/bin/python3 /root/wikipedia-edits-visualizer/producer/main.py
+WorkingDirectory=/root/wikipedia-edits-visualizer/producer
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

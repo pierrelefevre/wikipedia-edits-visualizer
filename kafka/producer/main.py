@@ -33,6 +33,8 @@ while conn_attempts < max_conn_attempts:
 
         time.sleep(3)
 
+if producer is None:
+    exit()
 
 print("Connected to Kafka server, starting to read stream...")
 
