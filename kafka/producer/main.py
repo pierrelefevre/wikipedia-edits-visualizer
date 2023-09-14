@@ -33,6 +33,7 @@ while conn_attempts < max_conn_attempts:
 
         time.sleep(3)
 
+
 if producer is None:
     exit()
 
@@ -40,9 +41,18 @@ print("Connected to Kafka server, starting to read stream...")
 
 # Read streaming event
 url = 'https://stream.wikimedia.org/v2/stream/recentchange'
+no_read = 0
+last_read_time = time.time()
 try:
     for event in EventSource(url):
         if event.event == 'message':
+            no_read += 1
+
+            if time.time() - last_read_time > 5:
+                print(f"Read {no_read} messages in the last 5 seconds")
+                no_read = 0
+                last_read_time = time.time()
+
             try:
                 change = json.loads(event.data)
             except ValueError:
