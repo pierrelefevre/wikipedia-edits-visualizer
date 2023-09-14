@@ -61,5 +61,8 @@ try:
                 # Send msg to topic wiki-changes
                 producer.send('wiki-changes', change)
 
+except Exception as e:
+    print(f"Error reading stream: {str(e)}")
+
 except KeyboardInterrupt:
     print("process interrupted")
