@@ -45,8 +45,7 @@ class EventResource:
                 if not validator.validate(json_event):
                     continue
 
-                edit_size = abs(json_event['length']
-                                ['new'] - json_event['length']['old'])
+                edit_size = json_event['length']['new'] - json_event['length']['old']
                 new_event = {
                     'title': json_event['title'],
                     'user': json_event['user'],
