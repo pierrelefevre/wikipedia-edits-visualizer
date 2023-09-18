@@ -247,7 +247,7 @@ function initCannon() {
     let radius = Math.min(maxRadius, Math.abs(diff)) / 100;
 
     console.log(radius, maxSize, diff);
-    
+
     const ballShape = new CANNON.Sphere(radius);
     const ballGeometry = new THREE.SphereBufferGeometry(radius, 32, 32);
 
