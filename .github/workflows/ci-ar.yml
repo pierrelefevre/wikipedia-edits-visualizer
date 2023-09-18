@@ -21,4 +21,4 @@ jobs:
         context: ./ar
         file: ./ar/Dockerfile
         push: true
-        tags: registry.cloud.cbh.kth.se/deploy-0819b9b6-e000-4a62-87c0-bc0a095a3c28/wikipedia-visualizer-frontend
+        tags: registry.cloud.cbh.kth.se/deploy-b54f2daa-cadb-49ce-9d83-7895e9cd3ef5/wikipedia-ar
