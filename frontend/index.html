@@ -34,6 +34,16 @@
 </head>
 
 <body>
+
+    <script>
+        // check if on mobile, then redirect to https://wikipedia-ar.app.cloud.cbh.kth.se/
+
+        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            window.location.href = "https://wikipedia-ar.app.cloud.cbh.kth.se/";
+        }
+    </script>
+
     <div id="instructions">
         <span>Click to start</span>
         <br />
