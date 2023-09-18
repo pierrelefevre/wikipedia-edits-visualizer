@@ -13,12 +13,12 @@ jobs:
       uses: docker/login-action@v2
       with:
         registry: registry.cloud.cbh.kth.se
-        username: robot$deploy-0819b9b6-e000-4a62-87c0-bc0a095a3c28+wikipedia-visualizer-frontend
-        password: 606D1lTEWoN1wClov4vEjX7F2UwslBZ0
+        username: ${{ secrets.FRONTEND_DOCKER_USERNAME }}
+        password: ${{ secrets.FRONTEND_DOCKER_PASSWORD }}
     - name: Build and push
       uses: docker/build-push-action@v3
       with:
         context: ./frontend
         file: ./frontend/Dockerfile
         push: true
-        tags: registry.cloud.cbh.kth.se/deploy-0819b9b6-e000-4a62-87c0-bc0a095a3c28/wikipedia-visualizer-frontend
+        tags: registry.cloud.cbh.kth.se/deploy-b54f2daa-cadb-49ce-9d83-7895e9cd3ef5/wikipedia
