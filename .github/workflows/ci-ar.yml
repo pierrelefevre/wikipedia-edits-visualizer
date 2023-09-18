@@ -1,4 +1,4 @@
-name: kthcloud-ci-frontend
+name: kthcloud-ci-ar
 "on":
   push:
     branches:
