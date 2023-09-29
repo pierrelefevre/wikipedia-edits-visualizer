@@ -1,5 +1,4 @@
 from flask import Flask, Response
-import time
 import json
 
 from kafka import KafkaConsumer
