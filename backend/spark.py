@@ -8,7 +8,7 @@ spark = (SparkSession
          .master('local')
          .appName('wiki-changes-event-consumer')
          # Add kafka package
-         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2")
+         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1")
          .getOrCreate())
 sc = spark.sparkContext
 
@@ -69,7 +69,7 @@ schema_wiki = StructType(
      StructField("server_name",StringType(),True),
      StructField("server_script_path",StringType(),True),
      StructField("server_url",StringType(),True),
-     StructField("timestamp",StringType(),True),
+     StructField("timestamp",IntegerType(),True),
      StructField("title",StringType(),True),
      StructField("type",StringType(),True),
      StructField("user",StringType(),True),
@@ -162,49 +162,57 @@ queryStreamMem = (df_wiki_changes
 
 
 
-from time import sleep
-import os
+def loop():
+    from time import sleep
+    import os
 
-# Count rows every 5 seconds while stream is active
-try:
-    i=1
-    # While stream is active, print count
-    while len(spark.streams.active) > 0:
+    # Count rows every 5 seconds while stream is active
+    try:
+        i=1
+        # While stream is active, print count
+        while len(spark.streams.active) > 0:
+            
+            # Clear output
+            os.system('clear')
+            print("Run:{}".format(i))
+            
+            print("lst_queries")
+            lst_queries = []
+            for s in spark.streams.active:
+                lst_queries.append(s.name)
+
+            print("verify")
+            # Verify if wiki_changes_count query is active before count
+            if "wiki_changes_count" in lst_queries:
+                print("count")
+                # Count number of events
+                spark.sql("select count(1) as qty from wiki_changes_count").show()
+            else:
+                print("'wiki_changes_count' query not found.")
+
+            print("sleep")
+            sleep(1)
+            i=i+1
+            
+    except KeyboardInterrupt:
+        # Stop Query Stream
+        queryStreamMem.stop()
         
-        # Clear output
-        os.system('clear')
-        print("Run:{}".format(i))
+        print("stream process interrupted")
+
+    # # Check active streams
+    # for s in spark.streams.active:
+    #     print("ID:{} | NAME:{}".format(s.id, s.name))
+
+
+    # # Stop ingestion
+    # # queryStream.stop()
+
+def stop():
+        queryStreamMem.stop()
         
-        print("lst_queries")
-        lst_queries = []
-        for s in spark.streams.active:
-            lst_queries.append(s.name)
-
-        print("verify")
-        # Verify if wiki_changes_count query is active before count
-        if "wiki_changes_count" in lst_queries:
-            print("count")
-            # Count number of events
-            spark.sql("select count(1) as qty from wiki_changes_count").show()
-        else:
-            print("'wiki_changes_count' query not found.")
-
-        print("sleep")
-        sleep(1)
-        i=i+1
-        
-except KeyboardInterrupt:
-    # Stop Query Stream
-    queryStreamMem.stop()
-    
-    print("stream process interrupted")
+        print("stream process stopped")
 
 
-
-# # Check active streams
-# for s in spark.streams.active:
-#     print("ID:{} | NAME:{}".format(s.id, s.name))
-
-
-# # Stop ingestion
-# # queryStream.stop()
+if __name__ == "__main__":
+    loop()
