@@ -21,6 +21,8 @@ df = (spark
   .format("kafka")
   .option("kafka.bootstrap.servers", kafka_host) # kafka server
   .option("subscribe", "wiki-changes") # topic
+  .option("failOnDataLoss", "false")
+  .option("kafka.metadata.max.age.ms", "1000")
 #   .option("startingOffsets", "earliest") # start from beginning 
   .load())
 
