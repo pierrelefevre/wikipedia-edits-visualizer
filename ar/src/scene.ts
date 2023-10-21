@@ -14,7 +14,7 @@ import {
   XRFrame,
 } from "three";
 
-const url = "https://stream.wikimedia.org/v2/stream/recentchange";
+const url = "https://wikipedia-api.app.cloud.cbh.kth.se/v1/events";
 const eventSource = new EventSource(url);
 
 eventSource.onopen = () => {
@@ -117,9 +117,8 @@ export function createScene(renderer: WebGLRenderer) {
 
   function shoot(event: any) {
     let maxSize = 4000;
-    if (!(event.length && event.length.old && event.length.new)) return;
 
-    let diff = event.length.new - event.length.old;
+    let diff = event.editSize;
     const maxRadius = 1000;
     maxSize = Math.max(maxSize, Math.abs(diff));
 
@@ -188,10 +187,7 @@ export function createScene(renderer: WebGLRenderer) {
     // event.data will be a JSON message
     const data = JSON.parse(event.data);
     // Edits from English Wikipedia
-    if (data.server_name === "en.wikipedia.org") {
-      // Output the title of the edited page
-      shoot(data);
-    }
+    shoot(data);
   };
 
   /**
@@ -228,7 +224,7 @@ export function createScene(renderer: WebGLRenderer) {
         );
       }
 
-      world.step(timeStep, 1/30);
+      world.step(timeStep, 1 / 30);
       // // Shrink balls
       // for (let i = 0; i < balls.length; i++) {
       //   if (balls[i].shapes[0].radius < 0.05) {

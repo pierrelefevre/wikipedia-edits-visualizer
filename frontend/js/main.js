@@ -3,7 +3,7 @@ import * as THREE from "./three.js";
 import Stats from "./stats.js";
 import { PointerLockControlsCannon } from "./PointerLockControlsCannon.js";
 
-const url = "https://stream.wikimedia.org/v2/stream/recentchange";
+const url = "https://wikipedia-api.app.cloud.cbh.kth.se/v1/events";
 const eventSource = new EventSource(url);
 
 eventSource.onopen = () => {
@@ -148,7 +148,9 @@ function initCannon() {
   sphereShape = new CANNON.Sphere(radius);
   sphereBody = new CANNON.Body({ mass: 5, material: physicsMaterial });
   sphereBody.addShape(sphereShape);
-  sphereBody.position.set(0, 1.3, 35);
+
+  // player position
+  sphereBody.position.set(0, 1.3, 100);
   sphereBody.linearDamping = 0.9;
   world.addBody(sphereBody);
 
@@ -160,9 +162,9 @@ function initCannon() {
   world.addBody(groundBody);
 
   // Add perimeter box
-  let wallHeight = 200;
-  let wallThickness = 0.1;
-  let innerSize = 20;
+  let wallHeight = 2000;
+  let wallThickness = 1;
+  let innerSize = 75;
   const boxSizes = [
     [innerSize, wallThickness],
     [wallThickness, innerSize],
@@ -207,39 +209,7 @@ function initCannon() {
   }
 
   function shoot(event) {
-    //   {
-    //     "$schema": "/mediawiki/recentchange/1.0.0",
-    //     "meta": {
-    //         "uri": "https://en.wikipedia.org/wiki/Category:Category-Class_politics_articles",
-    //         "request_id": "be43873f-8ef3-4f36-ba88-22fb27fd7793",
-    //         "id": "814177ae-4cf6-4f22-91f3-cf2dfc0e6622",
-    //         "dt": "2023-09-08T18:34:43Z",
-    //         "domain": "en.wikipedia.org",
-    //         "stream": "mediawiki.recentchange",
-    //         "topic": "eqiad.mediawiki.recentchange",
-    //         "partition": 0,
-    //         "offset": 4928880314
-    //     },
-    //     "id": 1673247079,
-    //     "type": "categorize",
-    //     "namespace": 14,
-    //     "title": "Category:Category-Class politics articles",
-    //     "title_url": "https://en.wikipedia.org/wiki/Category:Category-Class_politics_articles",
-    //     "comment": "[[:Category talk:Left-wing politicians in France]] added to category, [[Special:WhatLinksHere/Category talk:Left-wing politicians in France|this page is included within other pages]]",
-    //     "timestamp": 1694198083,
-    //     "user": "Simeon",
-    //     "bot": false,
-    //     "notify_url": "https://en.wikipedia.org/w/index.php?diff=1174483612&oldid=404589625",
-    //     "server_url": "https://en.wikipedia.org",
-    //     "server_name": "en.wikipedia.org",
-    //     "server_script_path": "/w",
-    //     "wiki": "enwiki",
-    //     "parsedcomment": "<a href=\"/wiki/Category_talk:Left-wing_politicians_in_France\" title=\"Category talk:Left-wing politicians in France\">Category talk:Left-wing politicians in France</a> added to category, <a href=\"/wiki/Special:WhatLinksHere/Category_talk:Left-wing_politicians_in_France\" title=\"Special:WhatLinksHere/Category talk:Left-wing politicians in France\">this page is included within other pages</a>"
-    // }
-    // Validate event
-    if (!(event.length && event.length.old && event.length.new)) return;
-
-    let diff = event.length.new - event.length.old;
+    let diff = event.editSize;
     const maxRadius = 1000;
     maxSize = Math.max(maxSize, Math.abs(diff));
 
@@ -290,7 +260,7 @@ function initCannon() {
     // set ballBody.velocity to fire downwards
     ballBody.velocity.set(Math.random() * 2 - 1, -10, Math.random() * 2 - 1);
 
-    ballBody.position.set(0, 50, 0);
+    ballBody.position.set(0, Math.random()*500, 0);
     ballMesh.position.copy(ballBody.position);
   }
 
@@ -300,10 +270,7 @@ function initCannon() {
     // event.data will be a JSON message
     const data = JSON.parse(event.data);
     // Edits from English Wikipedia
-    if (data.server_name === "en.wikipedia.org") {
-      // Output the title of the edited page
-      shoot(data);
-    }
+    shoot(data);
   };
 
   window.addEventListener("click", () => {});
@@ -341,7 +308,7 @@ function animate() {
 
   // Shrink balls
   for (let i = 0; i < balls.length; i++) {
-    if (balls[i].shapes[0].radius < 0.05) {
+    if (balls[i].shapes[0].radius < 0.5) {
       ballMeshes[i].geometry.dispose();
       ballMeshes[i].material.dispose();
       scene.remove(ballMeshes[i]);
@@ -351,9 +318,9 @@ function animate() {
       continue;
     }
 
-    let factor = 0.001;
-    if (balls[i].shapes[0].radius < 0.5) {
-      factor = 0.01;
+    let factor = 0.002;
+    if (balls[i].shapes[0].radius < 1) {
+      factor = 0.1;
     }
 
     // Adjust physics radius
