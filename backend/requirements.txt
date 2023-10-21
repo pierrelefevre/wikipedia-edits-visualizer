@@ -4,3 +4,4 @@ kafka-python
 uvicorn
 websockets
 flask-cors
+pyspark==3.5.0

@@ -6,6 +6,8 @@ from flask_cors import CORS
 from kafka import KafkaConsumer
 from cerberus import Validator
 
+from spark import count_total, user_count, user_largest_edit_size
+
 app = Flask(__name__)
 CORS(app)
 
@@ -65,6 +67,36 @@ def generate_sse_data(filter):
 def sse():
     filter = request.args.get('filter', default = 'all', type = str)
     return Response(generate_sse_data(filter), content_type='text/event-stream')
+
+
+total_cache = 0
+user_count_cache = []
+user_largest_edit_size_cache = []
+
+def cache_results():
+    global total_cache
+    global user_count_cache
+    global user_largest_edit_size_cache
+
+    total_cache = count_total()
+    user_count_cache = user_count()
+    user_largest_edit_size_cache = user_largest_edit_size()
+
+import threading
+@app.route('/v1/stats')
+def stats():
+    # Handle GET requests for /v1/stats here
+    # You can place your logic to retrieve and return statistics data
+
+    media = {}
+
+    threading.Thread(target=cache_results).start()
+
+    media['total_edits'] = total_cache
+    media['user_top_edit_count'] = user_count_cache
+    media['user_top_edit_size'] = user_largest_edit_size_cache
+
+    return Response(json.dumps(media), content_type='application/json')
 
 if __name__ == '__main__':
     app.debug = False

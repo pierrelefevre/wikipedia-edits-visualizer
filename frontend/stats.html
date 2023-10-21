@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bar Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Total Edits</h1>
+    <div id="totalEdits"></div>
+
+    <!-- div that puts the two canvases next to each other -->
+    <div style="display: flex; flex-direction: row;">
+        <div>
+            <h1>Top Edit Counts</h1>
+            <canvas id="editCountChart" width="800" height="400"></canvas>
+        </div>
+
+        <div>
+            <h1>Top Edit Sizes</h1>
+            <canvas id="editSizeChart" width="800" height="400"></canvas>
+        </div>
+    </div>
+
+    <script>
+
+        var chart1 = null;
+        var chart2 = null;
+
+        function fetchData() {
+            // Make an HTTP request to the API endpoint
+            fetch(`http://${location.hostname}/v1/stats`)
+                .then(response => response.json())
+                .then(apiData => {
+                    // Total Edits
+                    document.getElementById("totalEdits").textContent = `Total Edits: ${apiData.total_edits}`;           
+
+                    // Extract labels and data
+                    const editCountLabels = apiData.user_top_edit_count.map(entry => entry[0]);
+                    const editCountData = apiData.user_top_edit_count.map(entry => entry[1]);
+
+                    const editSizeLabels = apiData.user_top_edit_size.map(entry => entry[0]);
+                    const editSizeData = apiData.user_top_edit_size.map(entry => entry[1]);
+
+                    // Edit Count Chart
+                    if(chart1) {
+                        chart1.destroy();
+                    }
+                    const editCountChartCtx = document.getElementById("editCountChart").getContext("2d");
+                    chart1 = new Chart(editCountChartCtx, {
+                        type: "bar",
+                        data: {
+                            labels: editCountLabels,
+                            datasets: [{
+                                label: "Edit Count",
+                                data: editCountData,
+                                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                                borderColor: "rgba(75, 192, 192, 1)",
+                                borderWidth: 1,
+                            }],
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                },
+                            },
+                        },
+                    });
+
+                    // Edit Size Chart
+                    if (chart2) {
+                        chart2.destroy();
+                    }
+                    const editSizeChartCtx = document.getElementById("editSizeChart").getContext("2d");
+                    chart2 = new Chart(editSizeChartCtx, {
+                        type: "bar",
+                        data: {
+                            labels: editSizeLabels,
+                            datasets: [{
+                                label: "Edit Size",
+                                data: editSizeData,
+                                backgroundColor: "rgba(255, 99, 132, 0.2)",
+                                borderColor: "rgba(255, 99, 132, 1)",
+                                borderWidth: 1,
+                            }],
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                },
+                            },
+                        },
+                    });
+                })
+                .catch(error => {
+                    // Handle any errors from the request
+                    console.error("Error fetching data:", error);
+                });
+        }
+
+        // Fetch data initially and then every 5 seconds
+        fetchData();
+        setInterval(fetchData, 5000); // 5000 milliseconds = 5 seconds
+    </script>
+</body>
+</html>
+
