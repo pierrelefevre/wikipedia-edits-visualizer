@@ -14,7 +14,8 @@ import {
   XRFrame,
 } from "three";
 
-const url = "https://wikipedia-api.app.cloud.cbh.kth.se/v1/events";
+const host = location.hostname === "localhost" ? `http://${location.host}` : "https://wikipedia-api.app.cloud.cbh.kth.se";
+const url = `${host}/v1/events`;
 const eventSource = new EventSource(url);
 
 eventSource.onopen = () => {

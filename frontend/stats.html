@@ -26,9 +26,11 @@
         var chart1 = null;
         var chart2 = null;
 
+        const url = location.hostname === "localhost" ? `http://${location.hostname}` : "https://wikipedia-api.app.cloud.cbh.kth.se";
+
         function fetchData() {
             // Make an HTTP request to the API endpoint
-            fetch(`http://${location.hostname}/v1/stats`)
+            fetch(`${url}/v1/stats`)
                 .then(response => response.json())
                 .then(apiData => {
                     // Total Edits
