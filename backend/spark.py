@@ -1,15 +1,24 @@
 # This file is for loading a spark streaming session with sql
 
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import count, explode, split, col, sum
+from pyspark import SparkConf
+
+# Create a SparkConf and configure the JVM options
+conf = SparkConf()
+conf.set("spark.driver.memory", "4g")  # Set driver memory
+conf.set("spark.executor.memory", "8g")  # Set executor memory
+conf.set("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1")
 
 # Spark session & context
 spark = (SparkSession
-         .builder
-         .master('local')
-         .appName('wiki-changes-event-consumer')
-         # Add kafka package
-         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1")
-         .getOrCreate())
+        .builder
+        .master('local')
+        .appName('wiki-changes-event-consumer')
+        # Add kafka package
+        .config(conf=conf)
+        # .config("spark.sql.shuffle.partitions", 10)  # Set the number of partitions
+        .getOrCreate())
 sc = spark.sparkContext
 
 
@@ -23,7 +32,7 @@ df = (spark
   .option("subscribe", "wiki-changes") # topic
   .option("failOnDataLoss", "false")
   .option("kafka.metadata.max.age.ms", "1000")
-#   .option("startingOffsets", "earliest") # start from beginning 
+  .option("startingOffsets", "latest") # start from beginning 
   .load())
 
 
@@ -33,6 +42,7 @@ from pyspark.sql.types import StringType
 df1 = (df
     .withColumn("key", df["key"].cast(StringType()))
     .withColumn("value", df["value"].cast(StringType())))
+
 
 
 
@@ -82,7 +92,6 @@ schema_wiki = StructType(
 # Create dataframe setting schema for event data
 df_wiki = (df1.withColumn("value", from_json("value", schema_wiki))) # Sets schema for event data
 
-
 from pyspark.sql.functions import col, from_unixtime, to_date, to_timestamp
 
 # Transform into tabular 
@@ -124,97 +133,180 @@ df_wiki_formatted = (df_wiki.select(
     ,col("value.meta.uri").alias("meta_uri")
 ))
 
+import time
+count_query = (df_wiki_formatted
+        .agg(count("*").alias("total_rows"))  # Count the rows
+        .writeStream
+        .queryName("counting")
+        .format("memory")
+        .outputMode("complete")
+        .start())
 
-import os
+def count_total():
+    return spark.sql("select * from counting").collect()[0].total_rows
 
-# Start query stream over stream dataframe
-raw_path = os.getcwd() + "/data-lake/raw"
-checkpoint_path = os.getcwd() + "/data-lake/checkpoint"
+# group by user count
+user_count_query = (df_wiki_formatted
+        .groupBy("user")
+        .agg(count("*").alias("total_rows"))  # Count the rows
+        .writeStream
+        .queryName("user_counting")
+        .format("memory")
+        .outputMode("complete")
+        .start())
 
-queryStream =(
-    df_wiki_formatted
-    .writeStream
-    .format("parquet")
-    .queryName("wiki_changes_ingestion")
-    .option("checkpointLocation", checkpoint_path)
-    .option("path", raw_path)
-    .outputMode("append")
-    .partitionBy("change_timestamp_date", "server_name")
-    .start())
+def user_count():
+    # select top 10 users
+    return spark.sql("select * from user_counting order by total_rows desc limit 10").collect()
 
+# group by user largest edit size count
+user_largest_edit_size_query = (df_wiki_formatted
+        .groupBy("user")
+        .agg(sum(col("length_new") - col("length_old")).alias("edit_size"))  # Count the rows
+        .writeStream
+        .queryName("user_largest_edit_size_counting")
+        .format("memory")
+        .outputMode("complete")
+        .start())
 
-# Read parquet files as stream to output the number of rows
-df_wiki_changes = (
-    spark
-    .readStream
-    .format("parquet")
-    .schema(df_wiki_formatted.schema)
-    .load(raw_path)
-)
-
-
-
-# Output to memory to count rows
-queryStreamMem = (df_wiki_changes
- .writeStream
- .format("memory")
- .queryName("wiki_changes_count")
- .outputMode("update")
- .start())
+def user_largest_edit_size():
+    # select top 10 users
+    return spark.sql("select * from user_largest_edit_size_counting order by edit_size desc limit 10").collect()
 
 
+# # from pyspark.sql.functions import current_timestamp, expr
 
-def loop():
-    from time import sleep
-    import os
+# # # Calculate the timestamp for one hour ago
+# # one_hour_ago = current_timestamp() - expr("INTERVAL 1 HOUR")
 
-    # Count rows every 5 seconds while stream is active
-    try:
-        i=1
-        # While stream is active, print count
-        while len(spark.streams.active) > 0:
+# # # Filter the DataFrame to include only records with timestamps from the last hour
+# # df_wiki_formatted = df_wiki_formatted.filter(df_wiki_formatted["change_timestamp"] >= one_hour_ago)
+
+# import os
+
+# # Start query stream over stream dataframe
+# raw_path = os.getcwd() + "/data-lake/raw"
+# checkpoint_path = os.getcwd() + "/data-lake/checkpoint"
+
+# queryStream =(
+#     df_wiki_formatted
+#     .writeStream
+#     .format("parquet")
+#     .queryName("wiki_changes_ingestion")
+#     .option("checkpointLocation", checkpoint_path)
+#     .option("path", raw_path)
+#     .outputMode("append")
+#     .partitionBy("change_timestamp_date", "server_name")
+#     .start())
+
+
+# # Read parquet files as stream to output the number of rows
+# df_wiki_changes = (
+#     spark
+#     .readStream
+#     .format("parquet")
+#     .schema(df_wiki_formatted.schema)
+#     .load(raw_path)
+# )
+
+
+# query_name = "wiki_total_row_count"
+
+# # # Output to memory to count rows
+# # queryStreamMem = (df_wiki_changes
+# #  .writeStream
+# #  .format("memory")
+# #  .queryName(query_name)
+# #  .outputMode("append")
+# #  .start())
+
+
+# # # Create an aggregating query to count rows
+# # queryStreamMem = (df_wiki_changes
+# #   .groupBy()  # Group all rows into a single group
+# #   .agg(count("*").alias("total_rows"))  # Count the rows
+# #   .writeStream
+# #   .outputMode("append")  
+# #   .format("memory")
+# #   .queryName(query_name)
+# #   .start())
+
+
+# print("before")
+# # wordCountDF = df_wiki_changes.groupBy().count()
+# # wordCountDF = df_wiki_changes.count()
+# print("wordcountdf")
+
+# # queryStreamMem = (wordCountDF
+# #             .writeStream
+# #             .format("memory")
+# #             .outputMode("update")
+# #             .queryName(query_name)
+# #             .start())
+
+
+# # df_wiki_changes.writeStream.foreachBatch(lambda batch, batchId: print("Received data in batch:", batchId)).start()
+
+# queryStreamMem = (df_wiki_changes
+#   .agg(count("*").alias("total_rows"))  # Count the rows
+#   .writeStream
+#   .outputMode("complete")  # Output complete results
+#   .format("memory")
+#   .queryName(query_name)
+#   .start())
+
+# print("queryStreamMem")
+
+# def loop():
+#     print("loop")
+#     from time import sleep
+#     import os
+
+#     # Count rows every 5 seconds while stream is active
+#     try:
+#         i=1
+#         # While stream is active, print count
+#         while len(spark.streams.active) > 0:
+
+#             # Clear output
+#             # os.system('clear')
+#             print("Run:{}".format(i))
             
-            # Clear output
-            os.system('clear')
-            print("Run:{}".format(i))
-            
-            print("lst_queries")
-            lst_queries = []
-            for s in spark.streams.active:
-                lst_queries.append(s.name)
+#             lst_queries = []
+#             for s in spark.streams.active:
+#                 lst_queries.append(s.name)
 
-            print("verify")
-            # Verify if wiki_changes_count query is active before count
-            if "wiki_changes_count" in lst_queries:
-                print("count")
-                # Count number of events
-                spark.sql("select count(1) as qty from wiki_changes_count").show()
-            else:
-                print("'wiki_changes_count' query not found.")
+#             # Verify if wiki_changes_count query is active before count
+#             if query_name in lst_queries:
+#                 print("count")
+#                 # Count number of events
+#                 # spark.sql(f"select count(1) as qty from {query_name}").show()
+#                 spark.sql(f"select * from {query_name}").show()
+#             else:
+#                 print(f"'{query_name}' query not found.")
 
-            print("sleep")
-            sleep(1)
-            i=i+1
+#             sleep(1)
+#             i=i+1
             
-    except KeyboardInterrupt:
-        # Stop Query Stream
-        queryStreamMem.stop()
+#     except KeyboardInterrupt:
+#         # Stop Query Stream
+#         queryStreamMem.stop()
         
-        print("stream process interrupted")
+#         print("stream process interrupted")
 
-    # # Check active streams
-    # for s in spark.streams.active:
-    #     print("ID:{} | NAME:{}".format(s.id, s.name))
+#     # # Check active streams
+#     # for s in spark.streams.active:
+#     #     print("ID:{} | NAME:{}".format(s.id, s.name))
 
 
-    # # Stop ingestion
-    # # queryStream.stop()
+#     # # Stop ingestion
+#     # # queryStream.stop()
 
-def stop():
-        queryStreamMem.stop()
+# def stop():
+#         queryStreamMem.stop()
         
-        print("stream process stopped")
+#         print("stream process stopped")
 
 
-if __name__ == "__main__":
-    loop()
+# if __name__ == "__main__":
+#     loop()
