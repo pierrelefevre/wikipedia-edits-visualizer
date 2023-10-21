@@ -3,3 +3,4 @@ cerberus
 kafka-python
 uvicorn
 websockets
+flask-cors

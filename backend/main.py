@@ -1,10 +1,13 @@
-from flask import Flask, Response, request
 import json
+
+from flask import Flask, Response, request
+from flask_cors import CORS
 
 from kafka import KafkaConsumer
 from cerberus import Validator
 
 app = Flask(__name__)
+CORS(app)
 
 kafka_host = 'vm.cloud.cbh.kth.se:2579'
 # kafka_host = 'localhost:9092'
