@@ -3,7 +3,7 @@ import * as THREE from "./three.js";
 import Stats from "./stats.js";
 import { PointerLockControlsCannon } from "./PointerLockControlsCannon.js";
 
-const host = location.hostname === "localhost" ? `http://${location.hostname}` : "https://wikipedia-api.app.cloud.cbh.kth.se";
+const host = location.hostname === "localhost" ? `http://${location.hostname}` : "https://wikipedia-api.vm-app.cloud.cbh.kth.se";
 const url = `${host}/v1/events`;
 const eventSource = new EventSource(url);
 
