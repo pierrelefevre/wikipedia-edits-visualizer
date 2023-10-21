@@ -1,4 +1,4 @@
-from flask import Flask, Response
+from flask import Flask, Response, request
 import json
 
 from kafka import KafkaConsumer
@@ -23,13 +23,10 @@ event_data_schema = {
     }
 }
 
-
 validator = Validator(event_data_schema, allow_unknown=True)
 
 # This function generates SSE data
-
-
-def generate_sse_data():
+def generate_sse_data(filter):
     consumer = KafkaConsumer(
         'wiki-changes', auto_offset_reset='latest', bootstrap_servers=[kafka_host])
 
@@ -51,13 +48,20 @@ def generate_sse_data():
             'editSize':  edit_size
         }
 
+        if filter == 'large':
+            if edit_size < 500:
+                continue
+        elif filter == 'small':
+            if edit_size >= 100:
+                continue
+    
         yield "data: {}\n\n".format(json.dumps(new_event))
 
 
-@ app.route('/v1/events')
+@app.route('/v1/events')
 def sse():
-    return Response(generate_sse_data(), content_type='text/event-stream')
-
+    filter = request.args.get('filter', default = 'all', type = str)
+    return Response(generate_sse_data(filter), content_type='text/event-stream')
 
 if __name__ == '__main__':
     app.debug = False
