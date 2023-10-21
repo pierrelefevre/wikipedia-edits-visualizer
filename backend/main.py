@@ -40,25 +40,25 @@ def generate_sse_data(filter):
         # so we parse the json and create a new one
 
         json_event = json.loads(next_event)
+        
+        try:
+            edit_size = json_event['length']['new'] - json_event['length']['old']
+            new_event = {
+                'title': json_event['title'],
+                'user': json_event['user'],
+                'editSize':  edit_size
+            }
 
-        if not validator.validate(json_event):
+            if filter == 'large':
+                if edit_size < 500:
+                    continue
+            elif filter == 'small':
+                if edit_size >= 100:
+                    continue
+        
+            yield "data: {}\n\n".format(json.dumps(new_event))
+        except KeyError:
             continue
-
-        edit_size = json_event['length']['new'] - json_event['length']['old']
-        new_event = {
-            'title': json_event['title'],
-            'user': json_event['user'],
-            'editSize':  edit_size
-        }
-
-        if filter == 'large':
-            if edit_size < 500:
-                continue
-        elif filter == 'small':
-            if edit_size >= 100:
-                continue
-    
-        yield "data: {}\n\n".format(json.dumps(new_event))
 
 
 @app.route('/v1/events')
