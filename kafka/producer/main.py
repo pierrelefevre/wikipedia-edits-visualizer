@@ -12,6 +12,7 @@ print("Starting producer...")
 # Create producer
 conn_attempts = 0
 max_conn_attempts = 10
+producer = None
 
 while conn_attempts < max_conn_attempts:
     try:
