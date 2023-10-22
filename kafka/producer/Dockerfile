@@ -1,13 +1,9 @@
-FROM python
+FROM python:3.8-slim
 
 WORKDIR /app
 
-COPY ./requirements.txt /app/requirements.txt
+COPY . /app
 
-RUN pip install -r /app/requirements.txt
+RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
-COPY ./ /app/
-
-ENV PYTHONUNBUFFERED=1
-
-ENTRYPOINT [ "python", "/app/main.py" ]
+CMD ["python", "main.py"]
