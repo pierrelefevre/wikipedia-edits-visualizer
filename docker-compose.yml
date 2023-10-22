@@ -46,6 +46,10 @@ services:
     depends_on:
       - kafka1
     build: ./kafka/producer
+    environment:
+      KAFKA_HOST: kafka1
+      KAFKA_PORT: 9092
+      KAFKA_TOPIC: wiki-changes
     networks:
       - wiki
   backend:
