@@ -45,7 +45,19 @@ services:
   producer:
     depends_on:
       - kafka1
-    build: ./producer
+    build: ./kafka/producer
+    networks:
+      - wiki
+  backend:
+    depends_on:
+      - kafka1
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_HOST: kafka1
+      KAFKA_PORT: 9092
+      KAFKA_TOPIC: wiki-changes
     networks:
       - wiki
 
