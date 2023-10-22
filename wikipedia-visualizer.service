@@ -1,0 +1,13 @@
+[Unit]
+Description=Wikipedia Edits Visualizer Docker Compose Service
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/usr/bin/docker compose -f /root/wikipedia-edits-visualizer/docker-compose.yml up
+ExecStop=/usr/bin/docker compose -f /root/wikipedia-edits-visualizer/docker-compose.yml down
+WorkingDirectory=/root/wikipedia-edits-visualizer
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

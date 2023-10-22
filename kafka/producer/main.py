@@ -1,8 +1,11 @@
+from kafka import KafkaProducer
+from sseclient import SSEClient as EventSource
 import json
 import time
+import os
 
-from sseclient import SSEClient as EventSource
-from kafka import KafkaProducer
+kafka_host = f'{os.environ["KAFKA_HOST"]}:{os.environ["KAFKA_PORT"]}'
+kafka_topic = os.environ['KAFKA_TOPIC']
 
 print("Starting producer...")
 
@@ -17,7 +20,7 @@ while conn_attempts < max_conn_attempts:
             exit()
 
         producer = KafkaProducer(
-            bootstrap_servers='localhost:9092',  # Kafka server
+            bootstrap_servers=kafka_host,  # Kafka server
             value_serializer=lambda v: json.dumps(
                 v).encode('utf-8')  # json serializer
         )
@@ -59,7 +62,7 @@ try:
                 pass
             else:
                 # Send msg to topic wiki-changes
-                producer.send('wiki-changes', change)
+                producer.send(kafka_topic, change)
 
 except Exception as e:
     print(f"Error reading stream: {str(e)}")
